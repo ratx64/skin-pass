@@ -6,21 +6,32 @@ export enum ErrorCategory {
   UNKNOWN = 'UNKNOWN'
 }
 
+export type InspectLinkFormat = 'legacy' | 'modern' | 'unknown';
+export type AlgorithmVersion = 'v1' | 'v2';
+
 export interface InspectLink {
   url: string;
   isValid: boolean;
   uniqueId: string;
   normalizedUrl: string;
+  format: InspectLinkFormat;
   validationErrors: string[];
 }
 
 export interface PasswordResult {
   password: string;
+  algorithmVersion: AlgorithmVersion;
+  inspectFormat: InspectLinkFormat;
   strength: number;
   entropy: number;
   isDeterministic: boolean;
   securityChecks: SecurityCheck[];
   warnings: string[];
+}
+
+export interface PasswordGenerationOptions {
+  secretPhrase?: string;
+  algorithmVersion?: AlgorithmVersion;
 }
 
 export interface SecurityCheck {

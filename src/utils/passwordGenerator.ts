@@ -1,15 +1,24 @@
-import { characterSets, securityConfig, memorySecurity, browserSecurity } from '../config/security';
-import { InspectLink, PasswordResult, SecurityCheck } from '../types';
+import { characterSets, securityConfig, memorySecurity } from '../config/security';
+import {
+  InspectLink,
+  PasswordResult,
+  SecurityCheck,
+  PasswordGenerationOptions,
+  InspectLinkFormat,
+  AlgorithmVersion,
+} from '../types';
+
+const DEFAULT_ALGORITHM_VERSION: AlgorithmVersion = 'v2';
+const LEGACY_PATTERN = /S(\d+)A(\d+)D(\d+)/;
+const MODERN_PATTERN = /csgo_econ_action_preview(?:%20|\s)([A-Za-z0-9]+)/i;
 
 const calculateEntropy = (password: string): number => {
-  // Calculate the size of the character set used in the password
-  const charSetSize = 
+  const charSetSize =
     (password.match(/[a-z]/) ? characterSets.lowercase.length : 0) +
     (password.match(/[A-Z]/) ? characterSets.uppercase.length : 0) +
     (password.match(/[0-9]/) ? characterSets.numbers.length : 0) +
     (password.match(/[^a-zA-Z0-9]/) ? characterSets.special.length : 0);
 
-  // Calculate entropy using the formula: log2(charSetSize) * passwordLength
   return Math.log2(charSetSize) * password.length;
 };
 
@@ -17,7 +26,6 @@ const checkPasswordRequirements = (password: string): SecurityCheck[] => {
   const { passwordRequirements } = securityConfig;
   const checks: SecurityCheck[] = [];
 
-  // Check minimum character requirements
   const lowercaseCount = (password.match(/[a-z]/g) || []).length;
   const uppercaseCount = (password.match(/[A-Z]/g) || []).length;
   const numbersCount = (password.match(/[0-9]/g) || []).length;
@@ -47,22 +55,20 @@ const checkPasswordRequirements = (password: string): SecurityCheck[] => {
     details: `Found ${specialCount} special characters (minimum: ${passwordRequirements.minSpecial})`,
   });
 
-  // Check for repeated characters
   const repeatedChars = password.match(/(.)\1+/g) || [];
-  const maxRepeated = Math.max(...repeatedChars.map(s => s.length));
+  const maxRepeated =
+    repeatedChars.length > 0 ? Math.max(...repeatedChars.map((group) => group.length)) : 1;
   checks.push({
     name: 'Repeated Characters',
     passed: maxRepeated <= passwordRequirements.maxRepeatedChars,
     details: `Maximum repeated characters: ${maxRepeated} (maximum allowed: ${passwordRequirements.maxRepeatedChars})`,
   });
 
-  // Check for sequential characters using the actual character sets
   let maxSequential = 0;
   for (let i = 0; i < password.length - 1; i++) {
     const current = password[i];
     const next = password[i + 1];
-    
-    // Check sequential characters in each character set
+
     const checkSequential = (set: string) => {
       const currentIndex = set.indexOf(current);
       const nextIndex = set.indexOf(next);
@@ -115,23 +121,67 @@ const performSecurityChecks = (password: string): SecurityCheck[] => {
   return [...basicChecks, ...requirementChecks];
 };
 
+const stripControlChars = (value: string): string =>
+  Array.from(value)
+    .filter((char) => {
+      const code = char.charCodeAt(0);
+      return code >= 32 && code !== 127;
+    })
+    .join('');
+
 const normalizeUrl = (url: string): string => {
+  const trimmedUrl = stripControlChars(url.trim());
+
   try {
-    const normalized = new URL(url);
+    const normalized = new URL(trimmedUrl);
     return normalized.toString();
   } catch {
-    return url;
+    return trimmedUrl;
   }
 };
 
-const extractUniqueId = (url: string): string => {
-  // Match the pattern for CS2 skin inspect links
-  // Example: steam://rungame/730/76561202255233023/+csgo_econ_action_preview%20S76561198144091202A40446467891D5630817826245312529
-  const match = url.match(/S(\d+)A(\d+)D(\d+)/);
-  if (match) {
-    // Combine the matched groups to form a unique identifier
-    return `${match[1]}-${match[2]}-${match[3]}`;
+const detectInspectFormat = (url: string): InspectLinkFormat => {
+  if (LEGACY_PATTERN.test(url)) {
+    return 'legacy';
   }
+
+  if (MODERN_PATTERN.test(url)) {
+    return 'modern';
+  }
+
+  try {
+    const decodedUrl = decodeURIComponent(url);
+    if (MODERN_PATTERN.test(decodedUrl)) {
+      return 'modern';
+    }
+  } catch {
+    return 'unknown';
+  }
+
+  return 'unknown';
+};
+
+const extractUniqueId = (url: string): string => {
+  const legacyMatch = url.match(LEGACY_PATTERN);
+  if (legacyMatch) {
+    return `${legacyMatch[1]}-${legacyMatch[2]}-${legacyMatch[3]}`;
+  }
+
+  const directMatch = url.match(MODERN_PATTERN);
+  if (directMatch) {
+    return directMatch[1];
+  }
+
+  try {
+    const decoded = decodeURIComponent(url);
+    const decodedMatch = decoded.match(MODERN_PATTERN);
+    if (decodedMatch) {
+      return decodedMatch[1];
+    }
+  } catch {
+    return '';
+  }
+
   return '';
 };
 
@@ -142,19 +192,21 @@ const validateInspectLink = (url: string): InspectLink => {
       isValid: false,
       uniqueId: '',
       normalizedUrl: '',
+      format: 'unknown',
       validationErrors: ['URL must be a string'],
     };
   }
 
   const normalizedUrl = normalizeUrl(url);
   const uniqueId = extractUniqueId(normalizedUrl);
+  const format = detectInspectFormat(normalizedUrl);
   const validationErrors: string[] = [];
 
-  if (url.length > securityConfig.maxUrlLength) {
+  if (normalizedUrl.length > securityConfig.maxUrlLength) {
     validationErrors.push(`URL exceeds maximum length of ${securityConfig.maxUrlLength} characters`);
   }
 
-  if (!normalizedUrl.startsWith('steam:')) {
+  if (!securityConfig.allowedProtocols.some((protocol) => normalizedUrl.startsWith(protocol))) {
     validationErrors.push('URL must start with steam: protocol');
   }
 
@@ -166,43 +218,53 @@ const validateInspectLink = (url: string): InspectLink => {
     validationErrors.push('Could not extract unique identifier from URL. Please ensure you are using a valid CS2 skin inspect link.');
   }
 
-  // Sanitize input
-  const sanitizedUrl = normalizedUrl.replace(/[^\w\s\-.:/]/g, '');
-
   return {
-    url: sanitizedUrl,
+    url: normalizedUrl,
     isValid: validationErrors.length === 0,
     uniqueId,
-    normalizedUrl: sanitizedUrl,
+    normalizedUrl,
+    format,
     validationErrors,
   };
 };
 
-const generatePassword = async (link: InspectLink): Promise<PasswordResult> => {
-  if (!link.isValid) {
-    throw new Error('Invalid inspect link');
-  }
-
-  // Check browser security
-  let securityWarnings: string[] = [];
-  if (securityConfig.browserSecurity.preventExtensions && !browserSecurity.preventExtensionAccess()) {
-    securityWarnings.push('Browser extensions detected. For maximum security, please consider using a private/incognito window or temporarily disabling extensions.');
-  }
-
-  // Protect DOM
-  if (securityConfig.browserSecurity.domProtection) {
-    browserSecurity.protectDOM();
-  }
-
-  // Create deterministic hash from the link only
+const deriveSeedV1 = async (normalizedUrl: string, secretPhrase: string): Promise<Uint8Array> => {
   const encoder = new TextEncoder();
-  const linkHash = await crypto.subtle.digest(
-    'SHA-256',
-    encoder.encode(link.normalizedUrl)
-  );
-  const hashArray = Array.from(new Uint8Array(linkHash));
+  const material = `${normalizedUrl}|${secretPhrase}|skinpass:v1`;
+  const digest = await crypto.subtle.digest('SHA-256', encoder.encode(material));
+  return new Uint8Array(digest);
+};
 
-  // Initialize character pools with only common characters
+const deriveSeedV2 = async (normalizedUrl: string, secretPhrase: string): Promise<Uint8Array> => {
+  const encoder = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(`skinpass:v2:${secretPhrase || 'public-mode'}`),
+    { name: 'PBKDF2' },
+    false,
+    ['deriveBits'],
+  );
+
+  const saltDigest = await crypto.subtle.digest(
+    'SHA-256',
+    encoder.encode(`inspect:${normalizedUrl}|algorithm:v2`),
+  );
+
+  const derivedBits = await crypto.subtle.deriveBits(
+    {
+      name: 'PBKDF2',
+      hash: 'SHA-256',
+      salt: saltDigest,
+      iterations: Math.max(60000, securityConfig.hashIterations * 3),
+    },
+    keyMaterial,
+    512,
+  );
+
+  return new Uint8Array(derivedBits);
+};
+
+const generatePasswordFromSeed = (seed: Uint8Array): string => {
   const pools = {
     lowercase: characterSets.lowercase,
     uppercase: characterSets.uppercase,
@@ -210,88 +272,114 @@ const generatePassword = async (link: InspectLink): Promise<PasswordResult> => {
     special: characterSets.special,
   };
 
-  // Calculate minimum required characters for each type
   const minLength = Math.max(16, securityConfig.minPasswordLength);
   const minLowercase = Math.max(4, Math.floor(minLength * 0.3));
   const minUppercase = Math.max(4, Math.floor(minLength * 0.3));
   const minNumbers = Math.max(3, Math.floor(minLength * 0.2));
   const minSpecial = Math.max(2, Math.floor(minLength * 0.2));
-  
-  // Create an array of required characters
+
+  const getSeedByte = (index: number): number => seed[index % seed.length];
+
   const requiredChars: string[] = [];
-  
-  // Generate required characters for each type
   const generateChars = (pool: string, count: number, offset: number) => {
     for (let i = 0; i < count; i++) {
-      const index = hashArray[i + offset] % pool.length;
+      const index = getSeedByte(i + offset) % pool.length;
       requiredChars.push(pool[index]);
     }
   };
 
-  // Generate all required characters
   generateChars(pools.lowercase, minLowercase, 0);
   generateChars(pools.uppercase, minUppercase, minLowercase);
   generateChars(pools.numbers, minNumbers, minLowercase + minUppercase);
   generateChars(pools.special, minSpecial, minLowercase + minUppercase + minNumbers);
-  
-  // Fill remaining positions with random character types
+
   const remainingLength = minLength - requiredChars.length;
   for (let i = 0; i < remainingLength; i++) {
-    const charType = hashArray[i + minLength] % 4;
+    const charType = getSeedByte(i + minLength) % 4;
     let pool: string;
     switch (charType) {
-      case 0: pool = pools.lowercase; break;
-      case 1: pool = pools.uppercase; break;
-      case 2: pool = pools.numbers; break;
-      case 3: pool = pools.special; break;
-      default: pool = pools.lowercase;
+      case 0:
+        pool = pools.lowercase;
+        break;
+      case 1:
+        pool = pools.uppercase;
+        break;
+      case 2:
+        pool = pools.numbers;
+        break;
+      case 3:
+        pool = pools.special;
+        break;
+      default:
+        pool = pools.lowercase;
     }
-    const index = hashArray[i] % pool.length;
+
+    const index = getSeedByte(i + remainingLength) % pool.length;
     requiredChars.push(pool[index]);
   }
 
-  // Shuffle the characters using Fisher-Yates algorithm
   for (let i = requiredChars.length - 1; i > 0; i--) {
-    const j = hashArray[i] % (i + 1);
+    const j = getSeedByte(i) % (i + 1);
     [requiredChars[i], requiredChars[j]] = [requiredChars[j], requiredChars[i]];
   }
 
-  let finalPassword = requiredChars.join('');
+  return requiredChars.join('');
+};
 
-  // Ensure password meets all requirements
+const generatePassword = async (
+  link: InspectLink,
+  options: PasswordGenerationOptions = {},
+): Promise<PasswordResult> => {
+  if (!link.isValid) {
+    throw new Error('Invalid inspect link');
+  }
+
+  const algorithmVersion = options.algorithmVersion ?? DEFAULT_ALGORITHM_VERSION;
+  const secretPhrase = (options.secretPhrase ?? '').trim();
+  const effectiveSecret = secretPhrase || 'public';
+
+  const seed =
+    algorithmVersion === 'v1'
+      ? await deriveSeedV1(link.normalizedUrl, effectiveSecret)
+      : await deriveSeedV2(link.normalizedUrl, effectiveSecret);
+
+  let finalPassword = generatePasswordFromSeed(seed);
   const securityChecks = performSecurityChecks(finalPassword);
   const entropy = calculateEntropy(finalPassword);
-  const strength = securityChecks.filter(check => check.passed).length / securityChecks.length;
+  const strength = securityChecks.filter((check) => check.passed).length / securityChecks.length;
 
-  // Clear sensitive data from memory
   if (securityConfig.memorySecurity.wipeMemory) {
-    memorySecurity.secureClear(new Uint8Array(hashArray));
+    memorySecurity.secureClear(seed);
     memorySecurity.clearAfterTimeout(finalPassword, securityConfig.memorySecurity.clearInterval);
   }
 
-  // Protect memory
   if (securityConfig.memorySecurity.memoryProtection) {
     finalPassword = memorySecurity.protectMemory(finalPassword);
   }
 
+  const warnings: string[] = [];
+  if (!secretPhrase) {
+    warnings.push('No secret phrase set. Anyone with this inspect link can reproduce this password.');
+  }
+  if (algorithmVersion === 'v1') {
+    warnings.push('Legacy algorithm selected for compatibility. Use v2 for stronger derivation.');
+  }
+  warnings.push(
+    ...securityChecks
+      .filter((check) => !check.passed)
+      .map((check) => `${check.name}: ${check.details}`),
+  );
+
   return {
     password: finalPassword,
+    algorithmVersion,
+    inspectFormat: link.format,
     strength,
     entropy,
     isDeterministic: true,
     securityChecks,
-    warnings: [
-      ...securityWarnings,
-      ...securityChecks
-        .filter(check => !check.passed)
-        .map(check => `${check.name}: ${check.details}`)
-    ],
+    warnings,
   };
 };
 
-export {
-  validateInspectLink,
-  generatePassword,
-  calculateEntropy,
-  performSecurityChecks,
-}; 
+export { validateInspectLink, generatePassword, calculateEntropy, performSecurityChecks };

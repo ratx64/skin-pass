@@ -1,151 +1,77 @@
-# CS2 Password Generator 🔐
+# SkinPass
 
-A secure, client-side password generator that converts CS2 skin inspect links into strong, deterministic passwords. Built with React, TypeScript, and Tailwind CSS.
+SkinPass is a niche, fun CS2 utility that converts inspect links into deterministic passwords directly in your browser.
 
-![CS2 Password Generator](public/screenshot.png)
+It now supports:
+- modern inspect links (`steam://run/730//+csgo_econ_action_preview%20...`)
+- legacy inspect links (`steam://rungame/730/...+csgo_econ_action_preview%20S...A...D...`)
+- optional secret phrase for private outputs
+- algorithm versioning (`v2` recommended, `v1` for compatibility)
 
-## ✨ Features
+## Key ideas
 
-- 🔒 **100% Client-Side**: All operations happen in your browser
-- 🔐 **Zero Data Storage**: No data is stored or transmitted
-- 🛡️ **High Entropy**: Generates strong, secure passwords
-- 🔄 **Deterministic**: Same input always produces the same output
-- 🎨 **Modern UI**: Clean, responsive interface built with Tailwind CSS
-- 📱 **Mobile-Friendly**: Works seamlessly on all devices
+- Local only: no server-side conversion.
+- Deterministic: same inputs produce same output.
+- Optional privacy hardening: add a secret phrase so others cannot reproduce your password from the link alone.
 
-## 🚀 Quick Start
+## Quick start
 
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/yourusername/skin-pass.git
-   cd skin-pass
-   ```
+```bash
+npm install
+npm run dev
+```
 
-2. **Install dependencies**:
-   ```bash
-   npm install
-   ```
-
-3. **Start development server**:
-   ```bash
-   npm run dev
-   ```
-
-4. **Build for production**:
-   ```bash
-   npm run build
-   ```
-
-## 🛠️ Development
-
-### Available Scripts
-
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run lint` - Run ESLint
-- `npm run preview` - Preview production build
-- `npm audit` - Check for security vulnerabilities
-- `npm audit fix` - Fix security vulnerabilities
-
-### Tech Stack
-
-- React 18
-- TypeScript
-- Vite
-- Tailwind CSS
-- Headless UI
-- Framer Motion
-
-## 🚀 Deployment
-
-This project is configured for deployment on Cloudflare Pages. The deployment process is automated and includes:
-
-1. **Build Process**:
-   - TypeScript compilation
-   - Vite production build
-   - Asset optimization and compression
-
-2. **Deployment Steps**:
-   - Automatic build on push to main branch
-   - Asset upload to Cloudflare's global network
-   - Zero-downtime deployment
-
-3. **Build Output**:
-   - Optimized JavaScript bundle
-   - Minified CSS
-   - Compressed assets with gzip
-
-### Local Deployment
-
-To deploy locally:
+Production build:
 
 ```bash
 npm run build
 ```
 
-The build output will be in the `dist` directory, ready for deployment to any static hosting service.
+Lint:
 
-## 🔒 Security Features
-
-- **Cryptographic Hashing**: Secure password generation using salted hashes
-- **Key Stretching**: Multiple rounds of hashing for enhanced security
-- **Input Validation**: Strict validation of CS2 inspect links
-- **XSS Prevention**: Sanitized input handling
-- **CSRF Protection**: Built-in protection against cross-site request forgery
-- **CSP**: Content Security Policy implementation
-- **Secure Headers**: Additional security headers
-- **Memory Sanitization**: Secure memory handling
-
-### Security Updates
-
-To maintain security:
-
-1. **Regular Updates**:
-   ```bash
-   npm update
-   ```
-
-2. **Security Audits**:
-   ```bash
-   npm audit
-   npm audit fix
-   ```
-
-3. **Dependency Management**:
-   - Regular dependency updates
-   - Security vulnerability monitoring
-   - Automated security patches
-
-## 📝 Usage Guide
-
-1. **Copy a CS2 skin inspect link** from your Steam inventory
-2. **Paste the link** into the input field
-3. **Click "Generate Password"**
-4. **Copy the generated password** to your clipboard
-
-### Example Input
-```
-steam://rungame/730/76561202255233023/+csgo_econ_action_preview%20S76561198123456789A1234567890D1234567890123456789
+```bash
+npm run lint
 ```
 
-## ⚠️ Security Notes
+## Usage
 
-- All processing occurs in your browser
-- No data is stored or transmitted to any server
-- Passwords are generated deterministically
-- High entropy is maintained throughout the process
-- The tool is open-source and can be audited
+1. Paste an inspect link.
+2. Optionally add a secret phrase.
+3. Keep `v2` selected unless you need `v1` compatibility.
+4. Convert and copy the generated password.
 
-## 🤝 Contributing
+Example modern input:
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+```text
+steam://run/730//+csgo_econ_action_preview%206F7FC5AFF797D36E776D4F8967476A5F6B57EE9891826C2FB16807071F67605B78D3
+```
 
-## 📄 License
+Example legacy input:
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+```text
+steam://rungame/730/76561202255233023/+csgo_econ_action_preview%20S76561198144091202A40446467891D5630817826245312529
+```
 
-## 🙏 Acknowledgments
+## Security notes
 
-- Built with [Vite](https://vitejs.dev/)
-- Styled with [Tailwind CSS](https://tailwindcss.com/)
-- Icons from [Heroicons](https://heroicons.com/)
+What this tool is:
+- local deterministic converter
+- useful for niche/fun workflows
+
+What this tool is not:
+- not a password manager replacement
+- not protection against malware, keyloggers, or compromised browsers
+- not private in public mode (no secret phrase)
+
+If you care about privacy, always set a secret phrase and store final credentials in a trusted password manager.
+
+## Stack
+
+- React
+- TypeScript
+- Vite
+- Tailwind CSS
+
+## License
+
+MIT

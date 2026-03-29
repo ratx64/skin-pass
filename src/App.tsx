@@ -6,27 +6,40 @@ import { estimateCrackTime, CrackTimeEstimate } from './utils/estimateCrackTime'
 import { SecurityDisclaimer } from './components/ui/SecurityDisclaimer';
 import { ErrorDisplay } from './components/ui/ErrorDisplay';
 import { handleError } from './utils/errorHandler';
-import { ErrorCategory } from './types';
+import { AlgorithmVersion, ErrorCategory } from './types';
+
+interface ConvertRequest {
+  inspectLink: string;
+  secretPhrase: string;
+  algorithmVersion: AlgorithmVersion;
+}
 
 function App() {
   const [error, setError] = useState<string | null>(null);
   const [isConverting, setIsConverting] = useState(false);
   const [crackTimeInfo, setCrackTimeInfo] = useState<CrackTimeEstimate | null>(null);
 
-  const handleConvert = async (input: string): Promise<string> => {
+  const handleConvert = async ({
+    inspectLink,
+    secretPhrase,
+    algorithmVersion,
+  }: ConvertRequest): Promise<string> => {
     setIsConverting(true);
     setError(null);
     setCrackTimeInfo(null);
     try {
-      const validatedLink = validateInspectLink(input);
+      const validatedLink = validateInspectLink(inspectLink);
       if (!validatedLink.isValid) {
         throw new Error(validatedLink.validationErrors.join(', '));
       }
       
-      const result = await generatePassword(validatedLink);
+      const result = await generatePassword(validatedLink, {
+        secretPhrase,
+        algorithmVersion,
+      });
       const password = result.password;
 
-      const crackEstimate = estimateCrackTime(password);
+      const crackEstimate = await estimateCrackTime(password);
       setCrackTimeInfo(crackEstimate);
 
       return password;
@@ -36,7 +49,7 @@ function App() {
       const appError = handleError(
         error,
         ErrorCategory.VALIDATION,
-        { input }
+        { inspectLink, algorithmVersion }
       );
       setError(appError.message);
       throw appError;

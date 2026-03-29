@@ -9,45 +9,45 @@ export default {
       colors: {
         background: {
           DEFAULT: 'hsl(var(--background))',
-          dark: '#1A1625',
-          light: '#4A5568'
+          dark: '#101c28',
+          light: '#2a4257'
         },
         foreground: 'hsl(var(--foreground))',
         primary: {
-          DEFAULT: '#6B46C1',
-          dark: '#553C9A',
-          light: '#9F7AEA',
+          DEFAULT: '#8fe64d',
+          dark: '#66b730',
+          light: '#c8ff75',
           foreground: 'hsl(var(--primary-foreground))'
         },
         secondary: {
-          DEFAULT: '#ED64A6',
-          dark: '#D53F8C',
-          light: '#F687B3',
+          DEFAULT: '#4f6e8d',
+          dark: '#374d63',
+          light: '#7ca2c7',
           foreground: 'hsl(var(--secondary-foreground))'
         },
         success: {
-          DEFAULT: '#4caf50',
-          light: '#6bc06e',
-          dark: '#3d8b40',
+          DEFAULT: '#8fe64d',
+          light: '#bfff72',
+          dark: '#62a82e',
         },
         warning: {
-          DEFAULT: '#ff9800',
-          light: '#ffad33',
-          dark: '#cc7a00',
+          DEFAULT: '#f4d04f',
+          light: '#ffe17b',
+          dark: '#c8a323',
         },
         error: {
-          DEFAULT: '#f44336',
-          light: '#f6685e',
-          dark: '#d32f2f',
+          DEFAULT: '#e8584f',
+          light: '#ff8f7f',
+          dark: '#b93730',
         },
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-        'gradient-primary': 'linear-gradient(135deg, #2D3748 0%, #1A1625 100%)',
+        'gradient-primary': 'linear-gradient(145deg, #26384a 0%, #182431 45%, #0d141d 100%)',
       },
       fontFamily: {
-        sans: ['Inter var', 'Inter', 'sans-serif'],
-        display: ['Clash Display', 'sans-serif'],
+        sans: ['Rajdhani', 'Arial Narrow', 'sans-serif'],
+        display: ['Teko', 'Rajdhani', 'sans-serif'],
       },
       animation: {
         'float': 'float 6s ease-in-out infinite',

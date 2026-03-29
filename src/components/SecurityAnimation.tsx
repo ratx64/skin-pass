@@ -13,7 +13,7 @@ interface MatrixCharProps {
   delay: number;
 }
 
-const MatrixChar: React.FC<MatrixCharProps> = ({ position, char, delay }) => {
+const MatrixChar = ({ position, char, delay }: MatrixCharProps) => {
   const ref = useRef<THREE.Mesh>(null);
   
   useFrame(({ clock }) => {

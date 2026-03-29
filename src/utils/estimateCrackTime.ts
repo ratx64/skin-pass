@@ -1,4 +1,4 @@
-import zxcvbn, { ZXCVBNResult } from 'zxcvbn';
+import type { ZXCVBNResult } from 'zxcvbn';
 
 /**
  * Represents the result of the crack time estimation.
@@ -9,6 +9,16 @@ export interface CrackTimeEstimate {
   crackTimeSeconds: number; // Estimated crack time in seconds (can be Infinity)
 }
 
+let zxcvbnModulePromise: Promise<typeof import('zxcvbn')> | null = null;
+
+const loadZxcvbn = async () => {
+  if (!zxcvbnModulePromise) {
+    zxcvbnModulePromise = import('zxcvbn');
+  }
+
+  return zxcvbnModulePromise;
+};
+
 /**
  * Estimates the time to crack a password using zxcvbn.
  * 
@@ -18,16 +28,17 @@ export interface CrackTimeEstimate {
  *          under an offline, slow hashing scenario. 
  *          Returns null if the password is empty.
  */
-export const estimateCrackTime = (password: string): CrackTimeEstimate | null => {
+export const estimateCrackTime = async (password: string): Promise<CrackTimeEstimate | null> => {
   if (!password) {
     return null;
   }
 
-  // Ensure zxcvbn is loaded (it might load asynchronously in some setups)
-  // Although in Vite/React, direct import usually handles this.
+  const zxcvbnModule = await loadZxcvbn();
+  const zxcvbn = zxcvbnModule.default;
+
   if (typeof zxcvbn !== 'function') {
     console.error('zxcvbn function not available');
-    return null; 
+    return null;
   }
 
   const result: ZXCVBNResult = zxcvbn(password);

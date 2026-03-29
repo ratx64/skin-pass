@@ -14,11 +14,14 @@ export const Button = ({
   disabled,
   ...props
 }: ButtonProps) => {
-  const baseStyles = 'inline-flex items-center justify-center rounded-lg px-4 py-3 text-sm font-semibold shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 transition-all';
+  const baseStyles =
+    'inline-flex items-center justify-center rounded-sm px-4 py-2.5 text-sm font-semibold uppercase tracking-wider shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 transition-all border';
   
   const variantStyles = {
-    primary: 'bg-primary text-white hover:bg-primary-dark focus-visible:outline-primary',
-    secondary: 'bg-gray-700 text-white hover:bg-gray-600 focus-visible:outline-gray-700',
+    primary:
+      'bg-primary text-[#102112] hover:bg-primary-dark border-[#d5ff90]/50 focus-visible:outline-primary shadow-[0_0_0_1px_rgba(143,230,77,0.28),inset_0_1px_0_rgba(255,255,255,0.22)]',
+    secondary:
+      'bg-[#26394d] text-[#d8e9fb] hover:bg-[#30485f] border-[#7292b1]/50 focus-visible:outline-[#7ca2c7]',
   };
 
   const disabledStyles = 'opacity-50 cursor-not-allowed';

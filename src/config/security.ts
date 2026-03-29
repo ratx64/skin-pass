@@ -28,9 +28,9 @@ export const securityConfig: SecurityConfig = {
     memoryProtection: true,
   },
   browserSecurity: {
-    preventExtensions: true,
+    preventExtensions: false,
     secureClipboard: true,
-    domProtection: true,
+    domProtection: false,
   },
 };
 
@@ -45,7 +45,8 @@ export const characterSets = {
 };
 
 export const securityHeaders = {
-  'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';",
+  'Content-Security-Policy':
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none';",
   'X-Content-Type-Options': 'nosniff',
   'X-Frame-Options': 'DENY',
   'X-XSS-Protection': '1; mode=block',
@@ -95,81 +96,18 @@ export const memorySecurity = {
 };
 
 export const browserSecurity = {
-  preventExtensionAccess: (): boolean => {
-    try {
-      // Modern extension detection methods
-      const hasExtensions = [
-        // Chrome/Edge extensions
-        typeof (window as any).chrome !== 'undefined' && 
-          ((window as any).chrome.runtime || (window as any).chrome.webstore),
-        // Firefox extensions (modern method)
-        typeof (window as any).browser !== 'undefined' && 
-          (window as any).browser.runtime,
-        // Safari extensions
-        typeof (window as any).safari !== 'undefined' && 
-          (window as any).safari.extension,
-        // Check for common extension APIs
-        typeof (window as any).browserAction !== 'undefined' ||
-        typeof (window as any).extension !== 'undefined' ||
-        typeof (window as any).addon !== 'undefined',
-        // Check for extension-specific CSS
-        document.documentElement.matches(':-moz-any-link, :-webkit-any-link, :-ms-any-link')
-      ].some(Boolean);
-
-      return !hasExtensions;
-    } catch (e) {
-      // If we can't detect extensions, assume they might be present
-      return false;
-    }
-  },
+  preventExtensionAccess: (): boolean => true,
 
   secureClipboard: async (text: string): Promise<void> => {
     try {
       await navigator.clipboard.writeText(text);
-      setTimeout(async () => {
-        await navigator.clipboard.writeText('');
-      }, 5000);
-    } catch (e) {
+    } catch {
       console.error('Clipboard access denied');
     }
   },
 
   protectDOM: (): void => {
-    try {
-      // Use more modern and safer DOM protection methods
-      const observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-          if (mutation.type === 'childList' || mutation.type === 'attributes') {
-            // Prevent unauthorized DOM modifications
-            if (mutation.target instanceof HTMLElement) {
-              const element = mutation.target as HTMLElement;
-              if (element.id === 'password-display' || element.classList.contains('password-field')) {
-                // Allow modifications to password-related elements
-                return;
-              }
-              // Prevent other modifications
-              mutation.target.dispatchEvent(new Event('security-violation'));
-            }
-          }
-        });
-      });
-
-      // Observe the document body for changes
-      observer.observe(document.body, {
-        childList: true,
-        subtree: true,
-        attributes: true,
-        attributeFilter: ['class', 'id', 'style']
-      });
-
-      // Add event listener for security violations
-      document.addEventListener('security-violation', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        console.warn('Security violation detected: Unauthorized DOM modification');
-      });
-    } catch (e) {
-      console.error('DOM protection failed:', e);
-    }
+    // Intentionally a no-op.
+    // Client-side scripts cannot reliably "protect" DOM from a compromised browser.
   },
 }; 

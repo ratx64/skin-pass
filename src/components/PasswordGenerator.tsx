@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, type ChangeEvent } from 'react';
 import { validateInspectLink, generatePassword } from '../utils/passwordGenerator';
 import { InspectLink, PasswordResult } from '../types';
 import { securityConfig, browserSecurity } from '../config/security';
@@ -128,7 +128,7 @@ const PasswordGenerator = () => {
     return limited;
   }, []);
 
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setInspectLink(value);
     setError(null);
@@ -173,7 +173,7 @@ const PasswordGenerator = () => {
           setSecurityWarnings(prev => [...new Set([...prev, ...result.warnings])]);
         }
         
-        const crackEstimate = estimateCrackTime(result.password);
+        const crackEstimate = await estimateCrackTime(result.password);
         console.log('Crack Time Estimate:', crackEstimate);
         setCrackTimeInfo(crackEstimate);
       } else {
@@ -229,7 +229,7 @@ const PasswordGenerator = () => {
           type="text"
           value={inspectLink}
           onChange={handleInputChange}
-          placeholder="steam://rungame/730/..."
+          placeholder="steam://run/730//+csgo_econ_action_preview%20..."
           className="w-full px-4 py-3 bg-[#000814]/50 border border-[#00f7ff]/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#00f7ff]/50 transition-colors"
         />
         {error && (
