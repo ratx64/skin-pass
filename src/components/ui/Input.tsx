@@ -1,37 +1,47 @@
-import { InputHTMLAttributes } from 'react';
+import { InputHTMLAttributes, useId } from 'react';
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string;
   error?: string;
+  hint?: string;
 }
 
 export const Input = ({
   label,
   error,
+  hint,
   className = '',
+  id,
   ...props
 }: InputProps) => {
+  const generatedId = useId();
+  const inputId = id ?? generatedId;
+  const errorId = `${inputId}-error`;
+  const hintId = `${inputId}-hint`;
+  const describedBy = [hint ? hintId : null, error ? errorId : null].filter(Boolean).join(' ') || undefined;
+
   return (
-    <div>
-      <label
-        htmlFor={props.id}
-        className="block text-xs font-semibold uppercase tracking-[0.14em] text-[#b8cde3]"
-      >
+    <div className="field-block">
+      <label htmlFor={inputId} className="field-label">
         {label}
       </label>
-      <div className="mt-2">
-        <input
-          className={`block w-full rounded-sm border py-2.5 px-3.5 text-[#e9f4ff] shadow-sm ${
-            error
-              ? 'border-[#e8584f]/80 bg-[#2e1718]'
-              : 'border-[#5f7c99]/50 bg-[#182534]'
-          } placeholder:text-[#7f9ab5] focus:border-primary focus:ring-1 focus:ring-primary sm:text-sm ${className}`}
-          {...props}
-        />
-      </div>
-      {error && (
-        <p className="mt-2 text-xs text-[#ff8f7f]">{error}</p>
-      )}
+      <input
+        id={inputId}
+        className={`field ${className}`.trim()}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={describedBy}
+        {...props}
+      />
+      {hint ? (
+        <p id={hintId} className="hint">
+          {hint}
+        </p>
+      ) : null}
+      {error ? (
+        <p id={errorId} className="field-error">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
-}; 
+};
